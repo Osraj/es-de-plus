@@ -30,6 +30,7 @@
 #include "animations/MoveCameraAnimation.h"
 #include "guis/GuiApplicationUpdater.h"
 #include "guis/GuiGameImporter.h"
+#include "guis/GuiGameSearch.h"
 #include "guis/GuiMenu.h"
 #include "guis/GuiTextEditKeyboardPopup.h"
 #include "guis/GuiTextEditPopup.h"
@@ -1310,10 +1311,103 @@ bool ViewController::input(InputConfig* config, Input input)
     if (UIModeController::getInstance()->listen(config, input))
         return true;
 
+    // Game search: R3 (F3 on the keyboard), Ctrl+F, or up from the top row of a game grid
+    // (the search bar sits above it). Left stick click keeps the random game jump.
+    if (input.value != 0 && searchBarVisible()) {
+        const bool ctrlF {config->getDeviceId() == DEVICE_KEYBOARD && input.id == SDLK_f &&
+                          (SDL_GetModState() & KMOD_CTRL)};
+        bool upFromTop {false};
+        if (mState.viewing == ViewMode::GAMELIST && config->isMappedLike("up", input)) {
+            GamelistView* gamelist {dynamic_cast<GamelistView*>(mCurrentView.get())};
+            upFromTop = gamelist != nullptr && gamelist->cursorOnTopRow();
+        }
+        if (ctrlF || upFromTop || config->isMappedTo("rightthumbstickclick", input)) {
+            openGameSearch();
+            return true;
+        }
+    }
+
     if (mCurrentView)
         return mCurrentView->input(config, input);
 
     return false;
+}
+
+bool ViewController::searchBarVisible() const
+{
+    return mCurrentView != nullptr && !mWindow->getGameLaunchedState() &&
+           (mState.viewing == ViewMode::GAMELIST || mState.viewing == ViewMode::SYSTEM_SELECT);
+}
+
+void ViewController::openGameSearch()
+{
+    if (!searchBarVisible() || mWindow->peekGui() != this)
+        return;
+
+    SystemData* system {nullptr};
+    if (mState.viewing == ViewMode::GAMELIST)
+        system = mState.getSystem();
+    else
+        system = mSystemListView->getSelectedSystem();
+
+    cancelViewTransitions();
+    mCurrentView->stopListScrolling();
+    NavigationSounds::getInstance().playThemeNavigationSound(SELECTSOUND);
+    mWindow->pushGui(new GuiGameSearch(system));
+}
+
+bool ViewController::mouseInput(const MouseEvent& event)
+{
+    if (searchBarVisible()) {
+        const bool overBar {event.pos.x >= mSearchBarRect.x && event.pos.y >= mSearchBarRect.y &&
+                            event.pos.x <= mSearchBarRect.x + mSearchBarRect.z &&
+                            event.pos.y <= mSearchBarRect.y + mSearchBarRect.w};
+        if (event.type == MouseEvent::Type::MOTION)
+            mSearchBarHover = overBar;
+        if (overBar && event.type == MouseEvent::Type::BUTTON_DOWN &&
+            event.button == SDL_BUTTON_LEFT) {
+            openGameSearch();
+            return true;
+        }
+    }
+    return mCurrentView != nullptr && mCurrentView->mouseInput(event);
+}
+
+void ViewController::renderSearchBar(const glm::mat4& parentTrans)
+{
+    const float w {Renderer::getScreenWidth()};
+    const float h {Renderer::getScreenHeight()};
+
+    if (mSearchBarText == nullptr) {
+        // Top left of center: clear of the system status icons and most theme headers.
+        mSearchBarRect = {0.255f * w, 0.024f * h, 0.235f * w, 0.052f * h};
+        const float iconSize {mSearchBarRect.w * 0.5f};
+        mSearchBarIcon = std::make_unique<ImageComponent>(false, false);
+        mSearchBarIcon->setResize(iconSize, iconSize);
+        mSearchBarIcon->setImage(":/graphics/search.svg");
+        mSearchBarIcon->setPosition(mSearchBarRect.x + mSearchBarRect.w * 0.45f,
+                                    mSearchBarRect.y + (mSearchBarRect.w - iconSize) * 0.5f);
+        const float textX {mSearchBarRect.x + mSearchBarRect.w * 0.6f + iconSize};
+        mSearchBarText = std::make_unique<TextComponent>(
+            "Search games", Font::get(0.024f * h, FONT_PATH_LIGHT), 0xFFFFFFCC, ALIGN_LEFT,
+            ALIGN_CENTER, glm::ivec2 {0, 0}, glm::vec3 {textX, mSearchBarRect.y, 0.0f},
+            glm::vec2 {mSearchBarRect.z * 0.6f, mSearchBarRect.w});
+        mSearchBarHint = std::make_unique<TextComponent>(
+            "R3", Font::get(0.019f * h, FONT_PATH_LIGHT), 0xFFFFFF77, ALIGN_RIGHT, ALIGN_CENTER,
+            glm::ivec2 {0, 0},
+            glm::vec3 {mSearchBarRect.x + mSearchBarRect.z * 0.6f, mSearchBarRect.y, 0.0f},
+            glm::vec2 {mSearchBarRect.z * 0.4f - mSearchBarRect.w * 0.5f, mSearchBarRect.w});
+    }
+
+    const unsigned int color {mSearchBarHover ? 0xFFFFFF38u : 0xFFFFFF24u};
+    mRenderer->setMatrix(glm::translate(
+        parentTrans, glm::round(glm::vec3 {mSearchBarRect.x, mSearchBarRect.y, 0.0f})));
+    mRenderer->drawRect(0.0f, 0.0f, mSearchBarRect.z, mSearchBarRect.w, color, color, false, 1.0f,
+                        1.0f, Renderer::BlendFactor::SRC_ALPHA,
+                        Renderer::BlendFactor::ONE_MINUS_SRC_ALPHA, mSearchBarRect.w * 0.5f);
+    mSearchBarIcon->render(parentTrans);
+    mSearchBarText->render(parentTrans);
+    mSearchBarHint->render(parentTrans);
 }
 
 void ViewController::update(int deltaTime)
@@ -1373,6 +1467,9 @@ void ViewController::render(const glm::mat4& parentTrans)
         if (it->second == mCurrentView)
             gamelistRenderFunc(it);
     }
+
+    if (searchBarVisible())
+        renderSearchBar(parentTrans);
 
     if (mWindow->peekGui() == this)
         mWindow->renderHelpPromptsEarly();
