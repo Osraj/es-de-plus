@@ -13,6 +13,7 @@
 #include "Log.h"
 #include "Scripting.h"
 #include "Window.h"
+#include "renderers/Renderer.h"
 #include "resources/ResourceManager.h"
 #include "utils/FileSystemUtil.h"
 #include "utils/LocalizationUtil.h"
@@ -499,6 +500,50 @@ bool InputManager::parseEvent(const SDL_Event& event)
             }
         }
 #endif
+        case SDL_MOUSEMOTION:
+        case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEBUTTONUP:
+        case SDL_MOUSEWHEEL: {
+            // Touchscreens also generate mouse events, those are handled as touch input.
+            if ((event.type == SDL_MOUSEWHEEL ? event.wheel.which : event.button.which) ==
+                SDL_TOUCH_MOUSEID)
+                return false;
+
+            // Window pixels to render coordinates (they differ with a forced resolution).
+            int winWidth {0};
+            int winHeight {0};
+            SDL_GetWindowSize(Renderer::getInstance()->getSDLWindow(), &winWidth, &winHeight);
+            const glm::vec2 scale {
+                winWidth > 0 ? Renderer::getScreenWidth() / static_cast<float>(winWidth) : 1.0f,
+                winHeight > 0 ? Renderer::getScreenHeight() / static_cast<float>(winHeight) : 1.0f};
+
+            MouseEvent mouse {};
+            if (event.type == SDL_MOUSEWHEEL) {
+                int x {0};
+                int y {0};
+                SDL_GetMouseState(&x, &y);
+                mouse.type = MouseEvent::Type::WHEEL;
+                mouse.pos = glm::vec2 {x, y} * scale;
+                mouse.wheel = event.wheel.preciseY;
+                if (event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED)
+                    mouse.wheel = -mouse.wheel;
+                if (mouse.wheel == 0.0f)
+                    return false;
+            }
+            else if (event.type == SDL_MOUSEMOTION) {
+                mouse.type = MouseEvent::Type::MOTION;
+                mouse.pos = glm::vec2 {event.motion.x, event.motion.y} * scale;
+            }
+            else {
+                mouse.type = event.type == SDL_MOUSEBUTTONDOWN ? MouseEvent::Type::BUTTON_DOWN :
+                                                                 MouseEvent::Type::BUTTON_UP;
+                mouse.pos = glm::vec2 {event.button.x, event.button.y} * scale;
+                mouse.button = event.button.button;
+                mouse.clicks = event.button.clicks;
+            }
+            mWindow->mouseInput(mouse);
+            return event.type != SDL_MOUSEMOTION;
+        }
         case SDL_TEXTINPUT: {
             mWindow->textInput(event.text.text);
             break;

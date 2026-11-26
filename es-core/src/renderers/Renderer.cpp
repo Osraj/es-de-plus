@@ -193,6 +193,8 @@ bool Renderer::createWindow()
     // Prevent the application window from minimizing when switching windows (when launching
     // games or when manually switching windows using the task switcher).
     SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
+    // The click that focuses the window (it often sits on another monitor) also counts as a click.
+    SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
 #if defined(__unix__) && !defined(__ANDROID__)
     // Disabling desktop composition can lead to better framerates and a more fluid user
