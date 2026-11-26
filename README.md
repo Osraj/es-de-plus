@@ -1,3 +1,16 @@
+# ES-DE Plus (unofficial fork)
+
+This is an unofficial fork of [ES-DE](https://gitlab.com/es-de/emulationstation-de), kept in sync with upstream releases. It is not affiliated with or supported by the ES-DE project; please don't report problems with this fork upstream.
+
+What it adds on top of ES-DE 3.5.0:
+
+- **Game search**: a search bar at the top of the system and gamelist views. Open it with R3, by clicking it, by pressing up from the top row of a game grid, or with Ctrl+F. It has an on-screen keyboard for controllers, live results with covers, and a toggle between the current system (the default) and all systems. A plays the game, Y shows it in its gamelist.
+- **Mouse support**: the scroll wheel moves through lists, grids, carousels and menus. A click selects an entry, and clicking the selected entry (or double clicking) opens or launches it. Right click goes back.
+
+Linux build: same as upstream (see [INSTALL-DEV.md](INSTALL-DEV.md)). On Arch, FreeImage is only in the AUR; if it isn't installed system-wide, build it and pass `-DFREEIMAGE_HOME=<prefix>` to CMake.
+
+---
+
 # ES-DE Frontend
 
 ES-DE (EmulationStation Desktop Edition) is a frontend for browsing and launching games from your multi-platform collection.

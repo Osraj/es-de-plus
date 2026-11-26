@@ -44,6 +44,8 @@ public:
     void goToSystem(SystemData* system, bool animate);
 
     bool input(InputConfig* config, Input input) override;
+    bool mouseInput(const MouseEvent& event) override;
+    SystemData* getSelectedSystem() { return mPrimary->getSelected(); }
     void update(int deltaTime) override;
     void render(const glm::mat4& parentTrans) override;
 

@@ -100,6 +100,10 @@ public:
 
     void input(InputConfig* config, Input input);
     void textInput(const std::string& text, const bool pasting = false);
+    void mouseInput(const MouseEvent& event);
+    // Sends a press and release of a mapped button name ("a", "b", "up"...) as if it came
+    // from the keyboard, so mouse actions reuse the regular navigation code.
+    void injectInput(const std::string& buttonName);
     void logInput(InputConfig* config, Input input);
     void update(int deltaTime);
     void render();

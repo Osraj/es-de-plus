@@ -36,6 +36,13 @@ public:
     void setCursor(FileData*);
 
     bool input(InputConfig* config, Input input) override;
+    bool mouseInput(const MouseEvent& event) override;
+    // Whether "up" would leave the top of the list (opens the search bar above it).
+    bool cursorOnTopRow()
+    {
+        return mGrid != nullptr && mPrimary == mGrid.get() &&
+               mPrimary->getCursor() < mPrimary->getColumns();
+    }
     void enterDirectory(FileData* cursor);
 
     FileData* getNextEntry() { return mPrimary->getNext(); }

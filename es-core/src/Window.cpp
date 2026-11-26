@@ -374,6 +374,61 @@ void Window::input(InputConfig* config, Input input)
     }
 }
 
+void Window::injectInput(const std::string& buttonName)
+{
+    InputConfig* config {InputManager::getInstance().getInputConfigByDevice(DEVICE_KEYBOARD)};
+    Input mapped;
+    if (config == nullptr || !config->getInputByName(buttonName, &mapped))
+        return;
+    mapped.value = 1;
+    input(config, mapped);
+    mapped.value = 0;
+    input(config, mapped);
+}
+
+void Window::mouseInput(const MouseEvent& event)
+{
+    if (mBlockInput)
+        return;
+
+    const bool overlayActive {isScreensaverActive() || (mMediaViewer && mRenderMediaViewer) ||
+                              (mPDFViewer && mRenderPDFViewer) ||
+                              (mGameLaunchedState && mLaunchScreen && mRenderLaunchScreen)};
+
+    // Pointer movement and releases never count as activity, so a bumped mouse does not
+    // wake the screensaver.
+    if (event.type == MouseEvent::Type::MOTION || event.type == MouseEvent::Type::BUTTON_UP) {
+        if (!overlayActive && peekGui())
+            peekGui()->mouseInput(event);
+        return;
+    }
+
+    mTimeSinceLastInput = 0;
+
+    if (overlayActive) {
+        // Screensaver and launch screen: any click or scroll dismisses them ("b" never
+        // launches a game from the screensaver). Media/PDF viewers: wheel and left click page.
+        const bool viewer {(mMediaViewer && mRenderMediaViewer) ||
+                           (mPDFViewer && mRenderPDFViewer)};
+        if (!viewer ||
+            (event.type == MouseEvent::Type::BUTTON_DOWN && event.button != SDL_BUTTON_LEFT))
+            injectInput("b");
+        else if (event.type == MouseEvent::Type::WHEEL)
+            injectInput(event.wheel > 0.0f ? "left" : "right");
+        else
+            injectInput("right");
+        return;
+    }
+
+    if (peekGui() && peekGui()->mouseInput(event))
+        return;
+
+    if (event.type == MouseEvent::Type::WHEEL)
+        injectInput(event.wheel > 0.0f ? "up" : "down");
+    else if (event.button == SDL_BUTTON_RIGHT)
+        injectInput("b");
+}
+
 void Window::textInput(const std::string& text, const bool pasting)
 {
     if (peekGui())

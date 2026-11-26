@@ -103,8 +103,12 @@ public:
     const bool getGameLaunchTriggered() { return (mGameToLaunch != nullptr); }
 
     bool input(InputConfig* config, Input input) override;
+    bool mouseInput(const MouseEvent& event) override;
     void update(int deltaTime) override;
     void render(const glm::mat4& parentTrans) override;
+
+    // Opens the game search for the console being viewed (osraj).
+    void openGameSearch();
 
     enum class ViewMode {
         NOTHING,
@@ -207,6 +211,15 @@ private:
     bool mNextSystem;
     int mWindowChangedWidth;
     int mWindowChangedHeight;
+
+    // Search bar at the top of the console and game screens.
+    bool searchBarVisible() const;
+    void renderSearchBar(const glm::mat4& parentTrans);
+    glm::vec4 mSearchBarRect {0.0f};
+    bool mSearchBarHover {false};
+    std::unique_ptr<ImageComponent> mSearchBarIcon;
+    std::unique_ptr<TextComponent> mSearchBarText;
+    std::unique_ptr<TextComponent> mSearchBarHint;
 };
 
 #endif // ES_APP_VIEWS_VIEW_CONTROLLER_H

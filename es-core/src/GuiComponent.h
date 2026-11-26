@@ -14,6 +14,7 @@
 #include "animations/AnimationController.h"
 #include "utils/MathUtil.h"
 
+#include <SDL2/SDL_mouse.h>
 #include <functional>
 #include <memory>
 
@@ -26,6 +27,21 @@ class InputConfig;
 class TextCache;
 class ThemeData;
 class Window;
+
+// Mouse event in screen coordinates (osraj: mouse support).
+struct MouseEvent {
+    enum class Type {
+        MOTION,
+        BUTTON_DOWN,
+        BUTTON_UP,
+        WHEEL
+    };
+    Type type;
+    glm::vec2 pos;
+    int button; // SDL_BUTTON_LEFT, SDL_BUTTON_RIGHT, ...
+    int clicks; // 2 for a double click.
+    float wheel; // Positive is away from the user (scroll up).
+};
 
 enum class ViewTransition {
     SYSTEM_TO_SYSTEM,
@@ -84,6 +100,10 @@ public:
     // Return true if the input is consumed, false if it should continue to be passed
     // to other children.
     virtual bool input(InputConfig* config, Input input);
+
+    // Mouse input, return true if consumed. The default passes it to the children, topmost
+    // first. Unconsumed wheel and right-click events become up/down and back presses (Window).
+    virtual bool mouseInput(const MouseEvent& event);
 
     // Called when time passes.
     // Default implementation calls updateSelf(deltaTime) and updateChildren(deltaTime).

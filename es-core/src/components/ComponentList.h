@@ -74,6 +74,8 @@ public:
 
     void textInput(const std::string& text, const bool pasting = false) override;
     bool input(InputConfig* config, Input input) override;
+    // Click a row to select it, click the selected row to activate it.
+    bool mouseInput(const MouseEvent& event) override;
     void update(int deltaTime) override;
     void render(const glm::mat4& parentTrans) override;
     std::vector<HelpPrompt> getHelpPrompts() override;
@@ -148,6 +150,7 @@ private:
     float mHorizontalPadding;
     float mSelectorBarOffset;
     float mCameraOffset;
+    glm::mat4 mLastRenderTrans {1.0f};
 
     std::function<void(CursorState state)> mCursorChangedCallback;
     std::function<void(ScrollIndicator state, bool singleRowScroll)>

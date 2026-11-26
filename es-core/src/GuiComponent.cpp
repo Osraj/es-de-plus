@@ -65,6 +65,15 @@ GuiComponent::~GuiComponent()
         getChild(i)->setParent(nullptr);
 }
 
+bool GuiComponent::mouseInput(const MouseEvent& event)
+{
+    for (auto it = mChildren.crbegin(); it != mChildren.crend(); ++it) {
+        if ((*it)->isVisible() && (*it)->mouseInput(event))
+            return true;
+    }
+    return false;
+}
+
 void GuiComponent::textInput(const std::string& text, const bool pasting)
 {
     for (auto it = mChildren.cbegin(); it != mChildren.cend(); ++it)

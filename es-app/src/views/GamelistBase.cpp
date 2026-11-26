@@ -65,6 +65,47 @@ void GamelistBase::setCursor(FileData* cursor)
     }
 }
 
+bool GamelistBase::mouseInput(const MouseEvent& event)
+{
+    if (mPrimary == nullptr || mPrimary->size() == 0)
+        return false;
+
+    if (event.type == MouseEvent::Type::WHEEL) {
+        // One row per notch (one entry for lists and carousels), stopping at the ends.
+        const int step {mPrimary->isHorizontal() ? 1 : mPrimary->getColumns()};
+        const int target {std::clamp(mPrimary->getCursor() + (event.wheel > 0.0f ? -step : step), 0,
+                                     mPrimary->size() - 1)};
+        if (target != mPrimary->getCursor()) {
+            NavigationSounds::getInstance().playThemeNavigationSound(SCROLLSOUND);
+            mPrimary->setCursorIndex(target);
+        }
+        return true;
+    }
+    if (event.type != MouseEvent::Type::BUTTON_DOWN)
+        return false;
+    if (event.button == SDL_BUTTON_X1) {
+        mWindow->injectInput("b");
+        return true;
+    }
+    if (event.button != SDL_BUTTON_LEFT)
+        return false;
+
+    const int index {mPrimary->mouseHitTest(event.pos)};
+    if (index == -1)
+        return false;
+    // Click a game to select it, click the selected one (or double click) to launch it or to
+    // open the folder. A list can scroll between the two clicks of a double click, so the
+    // second one launches what the first one selected.
+    if (index == mPrimary->getCursor() || event.clicks >= 2) {
+        mWindow->injectInput("a");
+    }
+    else {
+        NavigationSounds::getInstance().playThemeNavigationSound(SCROLLSOUND);
+        mPrimary->setCursorIndex(index);
+    }
+    return true;
+}
+
 bool GamelistBase::input(InputConfig* config, Input input)
 {
     if (input.value != 0) {

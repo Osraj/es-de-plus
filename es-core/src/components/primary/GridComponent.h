@@ -114,6 +114,13 @@ private:
         return List::setCursor(obj);
     }
     bool remove(const T& obj) override { return List::remove(obj); }
+    int getColumns() const override { return std::max(1, mColumns); }
+    bool setCursorIndex(int index) override
+    {
+        if (index < 0 || index >= static_cast<int>(mEntries.size()))
+            return false;
+        return setCursor(mEntries.at(index).object);
+    }
     int size() const override { return List::size(); }
 
     enum class ImageFit {
@@ -661,6 +668,7 @@ template <typename T> void GridComponent<T>::update(int deltaTime)
 
 template <typename T> void GridComponent<T>::render(const glm::mat4& parentTrans)
 {
+    this->mMouseHitBoxes.clear();
     if (mEntries.empty())
         return;
 
@@ -683,6 +691,8 @@ template <typename T> void GridComponent<T>::render(const glm::mat4& parentTrans
 
     mRenderer->pushClipRect(glm::ivec2 {static_cast<int>(trans[3].x), static_cast<int>(trans[3].y)},
                             glm::ivec2 {static_cast<int>(dim.x), static_cast<int>(dim.y)});
+    // Clicks only count inside the visible grid area.
+    const glm::vec4 clipBox {trans[3].x, trans[3].y, trans[3].x + dim.x, trans[3].y + dim.y};
 
     // We want to render the currently selected item last and before that the last selected
     // item to avoid incorrect overlapping in case the element has been configured with for
@@ -829,6 +839,14 @@ template <typename T> void GridComponent<T>::render(const glm::mat4& parentTrans
         }
 
         const glm::vec3 itemPos {mEntries.at(*it).data.item->getPosition()};
+        this->addMouseHitBox(
+            static_cast<int>(*it), trans,
+            glm::vec2 {itemPos.x - mItemSize.x / 2.0f, itemPos.y - mItemSize.y / 2.0f}, mItemSize);
+        {
+            glm::vec4& box {this->mMouseHitBoxes.back().second};
+            box = glm::vec4 {std::max(box.x, clipBox.x), std::max(box.y, clipBox.y),
+                             std::min(box.z, clipBox.z), std::min(box.w, clipBox.w)};
+        }
         glm::vec2 originInwards {0.5f, 0.5f};
         glm::vec2 offsetInwards {0.0f, 0.0f};
 
