@@ -126,6 +126,16 @@ private:
     const T& getLast() const override { return List::getLast(); }
     bool setCursor(const T& obj) override { return List::setCursor(obj); }
     bool remove(const T& obj) override { return List::remove(obj); }
+    bool setCursorIndex(int index) override
+    {
+        if (index < 0 || index >= static_cast<int>(mEntries.size()))
+            return false;
+        return setCursor(mEntries.at(index).object);
+    }
+    bool isHorizontal() const override
+    {
+        return mType == CarouselType::HORIZONTAL || mType == CarouselType::HORIZONTAL_WHEEL;
+    }
     int size() const override { return List::size(); }
 
     int getCursor() override { return mCursor; }
@@ -702,6 +712,7 @@ template <typename T> void CarouselComponent<T>::render(const glm::mat4& parentT
 {
     const float camOffset {mInstantItemTransitions ? mEntryCamTarget : mEntryCamOffset};
 
+    this->mMouseHitBoxes.clear();
     int numEntries {static_cast<int>(mEntries.size())};
     if (numEntries == 0)
         return;
@@ -1225,6 +1236,8 @@ template <typename T> void CarouselComponent<T>::render(const glm::mat4& parentT
         }
 
         comp->setScale(renderItem.scale);
+        this->addMouseHitBox(renderItem.index, renderItem.trans * comp->getTransform(),
+                             glm::vec2 {0.0f, 0.0f}, comp->getSize());
         comp->setOpacity(renderItem.opacity * metadataOpacity);
         if (mHasUnfocusedItemSaturation)
             comp->setSaturation(renderItem.saturation);

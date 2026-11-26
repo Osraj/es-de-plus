@@ -109,6 +109,12 @@ private:
     const T& getLast() const override { return List::getLast(); }
     bool setCursor(const T& obj) override { return List::setCursor(obj); }
     bool remove(const T& obj) override { return List::remove(obj); }
+    bool setCursorIndex(int index) override
+    {
+        if (index < 0 || index >= static_cast<int>(mEntries.size()))
+            return false;
+        return setCursor(mEntries.at(index).object);
+    }
     int size() const override { return List::size(); }
 
     int getCursor() override { return mCursor; }
@@ -301,6 +307,7 @@ template <typename T> void TextListComponent<T>::update(int deltaTime)
 
 template <typename T> void TextListComponent<T>::render(const glm::mat4& parentTrans)
 {
+    this->mMouseHitBoxes.clear();
     if (size() == 0)
         return;
 
@@ -376,6 +383,8 @@ template <typename T> void TextListComponent<T>::render(const glm::mat4& parentT
 
     for (int i {startEntry}; i < listCutoff; ++i) {
         Entry& entry {mEntries.at(i)};
+        this->addMouseHitBox(i, trans, glm::vec2 {0.0f, (i - startEntry) * entrySize},
+                             glm::vec2 {mSize.x, entrySize});
         unsigned int color {0x00000000};
         unsigned int backgroundColor {0x00000000};
 

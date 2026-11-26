@@ -36,6 +36,7 @@ public:
     void setCursor(FileData*);
 
     bool input(InputConfig* config, Input input) override;
+    bool mouseInput(const MouseEvent& event) override;
     void enterDirectory(FileData* cursor);
 
     FileData* getNextEntry() { return mPrimary->getNext(); }

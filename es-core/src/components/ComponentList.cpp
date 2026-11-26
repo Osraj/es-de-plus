@@ -8,6 +8,7 @@
 
 #include "components/ComponentList.h"
 
+#include "Window.h"
 #include "resources/Font.h"
 #include "utils/LocalizationUtil.h"
 
@@ -233,6 +234,28 @@ void ComponentList::updateCameraOffset()
     }
 }
 
+bool ComponentList::mouseInput(const MouseEvent& event)
+{
+    if (event.type != MouseEvent::Type::BUTTON_DOWN || event.button != SDL_BUTTON_LEFT || !size() ||
+        mRowHeight <= 0.0f)
+        return false;
+
+    const glm::vec4 local {glm::inverse(mLastRenderTrans) *
+                           glm::vec4 {event.pos.x, event.pos.y, 0.0f, 1.0f}};
+    if (local.x < 0.0f || local.y < 0.0f || local.x > mSize.x || local.y > mSize.y)
+        return false;
+
+    const int row {static_cast<int>((local.y + mCameraOffset) / mRowHeight)};
+    if (row < 0 || row >= size())
+        return false;
+
+    if (row == mCursor)
+        mWindow->injectInput("a");
+    else
+        moveCursor(row - mCursor);
+    return true;
+}
+
 void ComponentList::render(const glm::mat4& parentTrans)
 {
     if (!size())
@@ -254,6 +277,7 @@ void ComponentList::render(const glm::mat4& parentTrans)
     mRenderer->pushClipRect(glm::ivec2 {clipRectPosX, clipRectPosY},
                             glm::ivec2 {clipRectSizeX, clipRectSizeY});
 
+    mLastRenderTrans = trans;
     // Move camera the scroll distance.
     trans = glm::translate(trans, glm::vec3 {0.0f, -mCameraOffset, 0.0f});
 

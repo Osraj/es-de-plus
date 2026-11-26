@@ -154,6 +154,37 @@ bool SystemView::input(InputConfig* config, Input input)
     return mPrimary->input(config, input);
 }
 
+bool SystemView::mouseInput(const MouseEvent& event)
+{
+    if (event.type == MouseEvent::Type::WHEEL) {
+        // One console per notch, without wrapping around.
+        const int target {std::clamp(mPrimary->getCursor() + (event.wheel > 0.0f ? -1 : 1), 0,
+                                     mPrimary->size() - 1)};
+        if (target != mPrimary->getCursor()) {
+            NavigationSounds::getInstance().playThemeNavigationSound(SYSTEMBROWSESOUND);
+            mPrimary->setCursorIndex(target);
+        }
+        return true;
+    }
+    if (event.type != MouseEvent::Type::BUTTON_DOWN || event.button != SDL_BUTTON_LEFT)
+        return false;
+
+    const int index {mPrimary->mouseHitTest(event.pos)};
+    if (index == -1)
+        return false;
+    // Click a console to select it, click the selected one to open it. The carousel moves the
+    // clicked console away from the pointer, so the second click of a double click opens the
+    // console the first click selected.
+    if (index == mPrimary->getCursor() || event.clicks >= 2) {
+        mWindow->injectInput("a");
+    }
+    else {
+        NavigationSounds::getInstance().playThemeNavigationSound(SYSTEMBROWSESOUND);
+        mPrimary->setCursorIndex(index);
+    }
+    return true;
+}
+
 void SystemView::update(int deltaTime)
 {
     mPrimary->update(deltaTime);
